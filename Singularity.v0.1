@@ -41,6 +41,7 @@ export PATH=$PATH:/opt/software/miniconda3/bin:/opt/software/PhaGCN
   cd /opt/software
 
   PATH=/opt/software/miniconda3/bin:$PATH
-  conda install -c bioconda ete3 'python<3.7'
+  # conda install -c bioconda ete3 'python<3.7'
+  pip install ete3
 
   python -c 'from ete3 import NCBITaxa; ncbi=NCBITaxa()'
