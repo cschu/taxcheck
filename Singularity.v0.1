@@ -30,6 +30,9 @@ export PATH=$PATH:/opt/software/miniconda3/bin:/opt/software/PhaGCN
 
   python3 --version
     
+  pip3 install ete3 six numpy
+  python3 -c 'from ete3 import NCBITaxa; ncbi=NCBITaxa()'
+
   mkdir -p /opt/software
 
   # all the conda packages won't work together.. ><;
@@ -40,8 +43,6 @@ export PATH=$PATH:/opt/software/miniconda3/bin:/opt/software/PhaGCN
 
   cd /opt/software
 
-  PATH=/opt/software/miniconda3/bin:$PATH
+  # PATH=/opt/software/miniconda3/bin:$PATH
   # conda install -c bioconda ete3 'python<3.7'
-  pip install ete3 six numpy
 
-  python -c 'from ete3 import NCBITaxa; ncbi=NCBITaxa()'
