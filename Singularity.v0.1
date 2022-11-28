@@ -30,10 +30,14 @@ export PATH=$PATH:/opt/software/miniconda3/bin:/opt/software/PhaGCN
 
   python3 --version
     
-  pip3 install ete3 six numpy
+  # pip3 install ete3 six numpy
   python3 -c 'from ete3 import NCBITaxa; ncbi=NCBITaxa()'
 
   mkdir -p /opt/software
+
+  git clone https://github.com/cschu/taxchecker.git
+  cd taxchecker
+  pip install -e .
 
   # all the conda packages won't work together.. ><;
   wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh 
@@ -44,5 +48,6 @@ export PATH=$PATH:/opt/software/miniconda3/bin:/opt/software/PhaGCN
   cd /opt/software
 
   PATH=/opt/software/miniconda3/bin:$PATH
-  conda install -c conda-forge -c bioconda samtools
+  conda install -c conda-forge -c samtools
+
 
