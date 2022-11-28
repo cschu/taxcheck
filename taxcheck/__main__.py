@@ -33,6 +33,7 @@ def main():
     cmd = ("samtools", "view", "-F", "0xf04", args.bamfile)
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     for aln in get_lines_from_chunks(sam_proc.stdout):
+		aln = aln.strip().split("\t")
         flag = int(aln[1])
         if flag & 0x1 and not (aln[2] == aln[6] or flag & 0x8):
             continue
