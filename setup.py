@@ -43,7 +43,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 			"ete3",
 			"six",
 			"numpy",
-			"bioconda",
+			"biopython",
 		],
 		entry_points={
 			"console_scripts": [
