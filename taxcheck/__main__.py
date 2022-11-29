@@ -68,13 +68,18 @@ def main():
         efetch_handle = Entrez.efetch(db="nucleotide", rettype="docsum", retmode="xml", start=start, retmax=chunksize, webenv=epost_results["WebEnv"], query_key=epost_results["QueryKey"], idtype="acc")
         data = Entrez.read(efetch_handle)
 
-        mod_ids = tuple(sorted((re.sub(r"^ref|", "", acc.strip("|")), acc) for acc in ids))
-        
+        ncbi_lookup = {
+            item["AccessionVersion"]: {
+                "accession": item["AccessionVersion"],
+                "id": item["Id"],
+                "taxid": item["TaxId"],
+            }
+            for item in data
+        }
 
-        for (acc, original_acc), acc_result in zip(mod_ids, sorted(data, key=lambda x:x["AccessionVersion"])):
-            ncbi_lookup[original_acc] = {"accession": acc_result["AccessionVersion"], "id": acc_result["Id"], "taxid": int(acc_result["TaxId"])}
-            print(original_acc, ncbi_lookup[original_acc])
-
+        for acc in ids:
+            mod_acc = re.sub(r"^ref|", "", acc.strip("|"))
+            print(acc, mod_acc, ncbi_lookup.get(mod_acc))
 
 #[
 #    {
