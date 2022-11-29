@@ -80,7 +80,7 @@ class LineageLookup:
                 index, prefix = LineageLookup.TAXLEVELS.get(rank)
             except TypeError:
                 continue
-            levels.append((index, prefix, str(tid), tname))
+            levels.append((index, prefix, str(tid), re.sub(r" +", "_", tname)))
 
         return get_lineage_str((index, prefix, tid) for index, prefix, tid, _ in levels), get_lineage_str((index, prefix, tname) for index, prefix, _, tname in levels)
 
