@@ -82,7 +82,7 @@ class LineageLookup:
                 continue
             levels.append((index, prefix, str(tid), re.sub(r" +", "_", tname)))
 
-        return get_lineage_str((index, prefix, tid) for index, prefix, tid, _ in levels), get_lineage_str((index, prefix, tname) for index, prefix, _, tname in levels)
+        return levels[-1][3], get_lineage_str((index, prefix, tid) for index, prefix, tid, _ in levels), get_lineage_str((index, prefix, tname) for index, prefix, _, tname in levels)
 
 
 
@@ -116,10 +116,10 @@ def main():
 
     ncbi_lookup = {}
     lineage_lookup = LineageLookup()
+    ref2tax = {}
 
     accessions = tuple(read2ref)
     chunksize = 20
-    taxids = set()
     for start in range(0, len(read2ref), chunksize):
         ids = accessions[start:start + chunksize]
         try:
@@ -142,7 +142,12 @@ def main():
         for acc in ids:
             mod_acc = re.sub(r"^ref\|", "", acc).strip("|")
             acc_data = ncbi_lookup.get(mod_acc)
-            print(acc, mod_acc, acc_data, *lineage_lookup.get_lineage(acc_data["taxid"]))
+            taxname, name_lineage, taxid_lineage = lineage_lookup.get_lineage(acc_data["taxid"])
+            # print(acc, mod_acc, acc_data, name_lineage, taxid_lineage)
+            
+            for read in read2ref[acc]:
+                print(read, acc, mod_acc, acc_data["taxid"], taxname, name_lineage, taxid_lineage, sep="\t")
+            
 
 #[
 #    {
