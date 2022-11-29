@@ -72,7 +72,7 @@ def main():
             item["AccessionVersion"]: {
                 "accession": item["AccessionVersion"],
                 "id": item["Id"],
-                "taxid": item["TaxId"],
+                "taxid": int(item["TaxId"]),
             }
             for item in data
         }
