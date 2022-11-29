@@ -40,7 +40,7 @@ def main():
 
         tags = dict(item.split(":")[0::2] for item in aln[11:])
         if not tags.get("XA"):
-            read2ref.setdefault(ref[1], set()).add(ref[0])              
+            read2ref.setdefault(aln[1], set()).add(aln[0])              
 
 
             
