@@ -78,7 +78,7 @@ def main():
         }
 
         for acc in ids:
-            mod_acc = re.sub(r"^ref|", "", acc.strip("|"))
+            mod_acc = re.sub(r"^ref\|", "", acc).strip("|")
             print(acc, mod_acc, ncbi_lookup.get(mod_acc))
 
 #[
