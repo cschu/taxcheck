@@ -74,7 +74,7 @@ class LineageLookup:
         names = self.ncbi.get_taxid_translator(lineage)
 
         levels = []
-        for tid, tname in zip(lineage, self.ncbi_translate_to_names(lineage)):
+        for tid, tname in zip(lineage, self.ncbi.ncbi_translate_to_names(lineage)):
             rank = ranks.get(tid, "").replace("superkingdom", "kingdom")
             try:
                 index, prefix = LineageLookup.TAXLEVELS.get(rank)
