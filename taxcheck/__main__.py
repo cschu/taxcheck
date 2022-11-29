@@ -60,7 +60,7 @@ class LineageLookup:
         def get_lineage_str(levels):
             return ";".join(
                 f"{prefix}__{string}"
-                for prefix, string in sorted(levels)
+                for _, prefix, string in sorted(levels)
             )
 
 
