@@ -5,7 +5,7 @@ import re
 import subprocess
 import sys
 
-from lineage import LineageLookup
+from taxcheck.lineage import LineageLookup
 
 
 
