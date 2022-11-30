@@ -5,8 +5,6 @@ import re
 import subprocess
 import sys
 
-from Bio import Entrez
-
 from lineage import LineageLookup
 
 
