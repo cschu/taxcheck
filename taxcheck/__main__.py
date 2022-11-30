@@ -40,15 +40,17 @@ def main():
     cmd = ("samtools", "view", "-F", "0x4", args.bamfile)
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
+    lineage_lookup = LineageLookup()
 
     for rname, yp_tag, xa_tag in extract_yp_reads_from_sam(sam_proc.stdout):
         print(rname, yp_tag, len(xa_tag))
+        lineages = tuple(lineage_lookup.get_lineage(taxid) for taxid in yp_tag)
+        for _, _, lineage in lineages:
+            print(lineage)
+
     
     
 
-
-    # ncbi_lookup = {}
-    # lineage_lookup = LineageLookup()
 
     # accessions = tuple(read2ref)
     # chunksize = 20
