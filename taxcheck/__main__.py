@@ -152,8 +152,8 @@ def main():
                         consensus_level = list(Lineage.TAXLEVELS)[level]
                         break    
         
-        consensus_id, consensus_name = consensus_lineage.levels[-1].values()        
-        print(rname, len(lineages2), len(aln_data["xa"]) + 1, consensus_level, consensus_id, consensus_name, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
+            consensus_id, consensus_name = consensus_lineage.levels[-1].values()        
+            print(rname, len(lineages2), len(aln_data["xa"]) + 1, consensus_level, consensus_id, consensus_name, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
 
 
             
