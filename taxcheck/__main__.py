@@ -51,19 +51,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("bamfile", type=str)
     ap.add_argument("email", type=str)
-    
+    ap.add_argument("--debug", action="store_true")
+    ap.add_argument("--lineage-cutoff", type=float, default=0.75)
+    ap.add_argument("--species-cutoff", type=float, default=0.99)
     args = ap.parse_args()
 
     cmd = ("samtools", "view", "-F", "0x4", args.bamfile)
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
-    lineage_lookup = LineageLookup()
     lfactory = LineageFactory()
-
     read2ref = {}
     refs = set()
     
-    print("Reading bam file...")
+    print("Reading bam file...", file=sys.stderr)
     for rname, ref, mapq, yp_tag, xa_tag in extract_yp_reads_from_sam(sam_proc.stdout):
         read2ref[rname] = {
             "ref": ref,
@@ -72,19 +72,12 @@ def main():
             "xa": xa_tag,
         }
         refs.update((ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple()))
-        # print(rname, yp_tag, len(xa_tag))
-        # lineages = tuple(lineage_lookup.get_lineage(taxid) for taxid in yp_tag)
-        # for _, _, lineage in lineages:
-        #    print(lineage)
-        if len(read2ref) > 10:
+        if args.debug and len(read2ref) > 10:
             break
 
-    with open("refs.txt", "wt") as _out:
-        print(*sorted(refs), sep="\n", file=_out)
-       
-    print(f"Looking up {len(refs)} taxonomy ids...") 
+    print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr) 
     cached_ncbi = "ncbi_lut.json"
-    if os.path.isfile(cached_ncbi):
+    if args.debug and os.path.isfile(cached_ncbi):
         with open(cached_ncbi) as _in:
             ncbi_lookup = json.load(_in)
     else:
@@ -92,95 +85,63 @@ def main():
         with open(cached_ncbi, "wt") as _out:
             json.dump(ncbi_lookup, _out)
 
-    print("Annotating reads...")
+    print("Annotating reads...", file=sys.stderr)
     for rname, aln_data in read2ref.items():
 
-        # targets = (aln_data["ref"],) + tuple(ref for ref, _ in aln_data["xa"]) if aln_data["xa"] else tuple()
-        # print(targets)
-        # lcount = Counter
-        print(rname, aln_data)
         rrefs = ((aln_data["ref"],) + (tuple(r for r, _ in aln_data["xa"]) if aln_data["xa"] else tuple()))
-        print("RREFS", rrefs)
-        print("CHECK", aln_data["ref"] in ncbi_lookup)
+        
+        if args.debug:
+            print(rname, aln_data, file=sys.stderr)
+            print("RREFS", rrefs, file=sys.stderr)
+            print("CHECK", aln_data["ref"] in ncbi_lookup, file=sys.stderr)
 
+        # count how often a read aligns against a refseq from a specific taxonomy
         lcount = Counter()
         for ref in rrefs:
-            print(ref, ncbi_lookup.get(ref))
+            if args.debug:
+                print(ref, ncbi_lookup.get(ref), file=sys.stderr)
             lcount[ncbi_lookup.get(ref, {}).get("taxid", -1)] += 1
-        print("LCOUNT", lcount)
-        print("LCOUNT HAS -1", -1 in lcount)
-        #break 
+        
+        if args.debug:
+            print("LCOUNT", lcount, file=sys.stderr)
+            print("LCOUNT HAS -1", -1 in lcount, file=sys.stderr)
 
-        #lcount = Counter(
-        #    ncbi_lookup.get(ref, ncbi_tax_lookup(args.email, [ref])).get("taxid", -1)
-        #    for ref in ((aln_data["ref"],) + (tuple(r for r, _ in aln_data["xa"]) if aln_data["xa"] else tuple()))
-        #)
-        #break
-        lineage_data = {
+        # generate lineages from each reference and store the alignment counts along with it  
+        lineages2 = {
             taxid: {
                 "lineage": lfactory.generate_lineage(taxid),
                 "count": lcount[taxid], 
-                #sum(
-                #    1 
-                #    for ref, _ in aln_data["xa"] + (aln_data["ref"], aln_data["mapq"])
-                #    if ncbi_lookup.get(ref, {}).get("taxid", -1) == taxid
-                #),
             }
             for taxid in aln_data["yp"]
         }
-        print(lineage_data)
-        lineages = tuple(tuple(v.values()) for v in lineage_data.values())  #  for item in lineage_data.values()] 
-        print(lineages)
-        print(*(f"{l.get_string()}: {c}" for l, c in lineages), sep="\n")
-        if len(lineages) == 1:
-            consensus_lineage = lineages[0][0]
+
+        if args.debug:
+            print(*lineages2, sep="\n", file=sys.stderr)            
+            print(*(f"{l.get_string()}: {c}" for l, c in lineages2.values()), sep="\n", file=sys.stderr)
+
+        # determine a consensus line based on fraction of alignments
+        if len(lineages2) == 1:
+            consensus_lineage = tuple(lineages2.values())[0]["lineage"]
         else:
-            for level in range(5, -1, -1):
-                c = Counter()
-                for lineage, count in lineages:
-                    c.update((lineage.levels[level]["id"],) * count)
-                print(c)
-                if c:
-                    top_taxid, top_count = c.most_common()[0]
-                    if top_count / len(c) > 0.75:
+            # iterate from species -> kingdom
+            for level in range(Lineage.TAXLEVELS["species"][0], -1, -1):
+                tax_counter = Counter()
+                # for each level count the taxids (multiplied by number of alignments)
+                for lineage, count in lineages2.values():
+                    tax_counter.update((lineage.levels[level]["id"],) * count)
+                if args.debug:
+                    print("LEVEL", level, tax_counter, file=sys.stderr)
+                # then check if there's a consensus (based on fractional representation by the alignments)
+                if tax_counter:
+                    top_taxid, top_count = tax_counter.most_common()[0]
+                    cutoff = args.species_cutoff if level == Lineage.TAXLEVELS["species"][0] else args.lineage_cutoff
+                    if top_count / sum(tax_counter.values()) > cutoff:
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
-                        break
+                        break    
+                    
         print(rname, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
 
 
-
-    
-
-
-    # accessions = tuple(read2ref)
-    # chunksize = 20
-    # for start in range(0, len(read2ref), chunksize):
-    #     ids = accessions[start:start + chunksize]
-    #     try:
-    #         epost_results = Entrez.read(Entrez.epost(db="nucleotide", id=",".join(ids), format="acc"))
-    #     except RuntimeError as err:
-    #         print("Problem with IDs:", *ids, sep="\n", file=sys.stderr)
-    #         continue
-    #     efetch_handle = Entrez.efetch(db="nucleotide", rettype="docsum", retmode="xml", start=start, retmax=chunksize, webenv=epost_results["WebEnv"], query_key=epost_results["QueryKey"], idtype="acc")
-    #     data = Entrez.read(efetch_handle)
-
-    #     ncbi_lookup = {
-    #         item["AccessionVersion"]: {
-    #             "accession": item["AccessionVersion"],
-    #             "id": item["Id"],
-    #             "taxid": int(item["TaxId"]),
-    #         }
-    #         for item in data
-    #     }
-
-    #     for acc in ids:
-    #         mod_acc = re.sub(r"^ref\|", "", acc).strip("|")
-    #         acc_data = ncbi_lookup.get(mod_acc)
-    #         taxname, name_lineage, taxid_lineage = lineage_lookup.get_lineage(acc_data["taxid"])
-    #         # print(acc, mod_acc, acc_data, name_lineage, taxid_lineage)
-            
-    #         for read in read2ref[acc]:
-    #             print(read, acc, mod_acc, acc_data["taxid"], taxname, name_lineage, taxid_lineage, sep="\t")
             
 
 

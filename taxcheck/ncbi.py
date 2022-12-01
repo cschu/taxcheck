@@ -10,9 +10,9 @@ def ncbi_tax_lookup(email, accessions, chunksize=20):
     for start in range(0, len(accessions), chunksize):
         ids = accessions[start:start + chunksize]
         if len(accessions) == 1:
-            print(f"Looking up {ids[0]}...", end="")
+            print(f"Looking up {ids[0]}...", end="", file=sys.stderr)
         else:
-            print(f"Looking up id block {start}-{min(len(accessions) - 1, start + chunksize - 1)}...", end="")
+            print(f"Looking up id block {start}-{min(len(accessions) - 1, start + chunksize - 1)}...", end="", file=sys.stderr)
         try:
             epost_results = Entrez.read(Entrez.epost(db="nucleotide", id=",".join(ids), format="acc"))
         except RuntimeError as err:
@@ -24,7 +24,7 @@ def ncbi_tax_lookup(email, accessions, chunksize=20):
             webenv=epost_results["WebEnv"], query_key=epost_results["QueryKey"]
         )
         data = Entrez.read(efetch_handle)
-        print(f"{len(data)} entries received.")
+        print(f"{len(data)} entries received.", file=sys.stderr)
 
         for item in data:
             ncbi_lookup[item["AccessionVersion"]] = {
