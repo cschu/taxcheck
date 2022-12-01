@@ -70,7 +70,7 @@ def main():
         # for _, _, lineage in lineages:
         #    print(lineage)
         
-    ncbi_lookup = ncbi_tax_lookup(args.email, refs)
+    ncbi_lookup = ncbi_tax_lookup(args.email, list(refs))
 
     for rname, aln_data in read2ref.items():
         lineage_data = {
