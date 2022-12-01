@@ -69,6 +69,8 @@ def main():
         # lineages = tuple(lineage_lookup.get_lineage(taxid) for taxid in yp_tag)
         # for _, _, lineage in lineages:
         #    print(lineage)
+        if len(read2ref) > 10:
+            break
         
     ncbi_lookup = ncbi_tax_lookup(args.email, list(refs))
 
