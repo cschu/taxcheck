@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import gzip
+import json
+import os
 import re
 import subprocess
 import sys
@@ -32,7 +34,11 @@ def extract_yp_reads_from_sam(stream):
         aln = aln.strip().split("\t")
         tags = dict(item.split(":")[0::2] for item in aln[11:])
         if tags.get("YP"):
-            xa_tag = tuple(item.split(",")[0::3] for item in tags.get("XA", "").strip(";").split(";"))
+            xa_tag = tags.get("XA")
+            if xa_tag is None:
+                xa_tag = tuple()
+            else:
+                xa_tag = tuple(item.split(",")[0::3] for item in xa_tag.strip(";").split(";"))
             yield aln[0], aln[2], aln[4], tuple(map(int, tags.get("YP").split(","))), xa_tag
 
 
@@ -57,6 +63,7 @@ def main():
     read2ref = {}
     refs = set()
     
+    print("Reading bam file...")
     for rname, ref, mapq, yp_tag, xa_tag in extract_yp_reads_from_sam(sam_proc.stdout):
         read2ref[rname] = {
             "ref": ref,
@@ -64,40 +71,80 @@ def main():
             "yp": yp_tag,
             "xa": xa_tag,
         }
-        refs.update((ref, ) + tuple(item[0] for item in xa_tag))
+        refs.update((ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple()))
         # print(rname, yp_tag, len(xa_tag))
         # lineages = tuple(lineage_lookup.get_lineage(taxid) for taxid in yp_tag)
         # for _, _, lineage in lineages:
         #    print(lineage)
         if len(read2ref) > 10:
             break
-        
-    ncbi_lookup = ncbi_tax_lookup(args.email, list(refs))
 
+    with open("refs.txt", "wt") as _out:
+        print(*sorted(refs), sep="\n", file=_out)
+       
+    print(f"Looking up {len(refs)} taxonomy ids...") 
+    cached_ncbi = "ncbi_lut.json"
+    if os.path.isfile(cached_ncbi):
+        with open(cached_ncbi) as _in:
+            ncbi_lookup = json.load(_in)
+    else:
+        ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=400)
+        with open(cached_ncbi, "wt") as _out:
+            json.dump(ncbi_lookup, _out)
+
+    print("Annotating reads...")
     for rname, aln_data in read2ref.items():
+
+        # targets = (aln_data["ref"],) + tuple(ref for ref, _ in aln_data["xa"]) if aln_data["xa"] else tuple()
+        # print(targets)
+        # lcount = Counter
+        print(rname, aln_data)
+        rrefs = ((aln_data["ref"],) + (tuple(r for r, _ in aln_data["xa"]) if aln_data["xa"] else tuple()))
+        print("RREFS", rrefs)
+        print("CHECK", aln_data["ref"] in ncbi_lookup)
+
+        lcount = Counter()
+        for ref in rrefs:
+            print(ref, ncbi_lookup.get(ref))
+            lcount[ncbi_lookup.get(ref, {}).get("taxid", -1)] += 1
+        print("LCOUNT", lcount)
+        print("LCOUNT HAS -1", -1 in lcount)
+        #break 
+
+        #lcount = Counter(
+        #    ncbi_lookup.get(ref, ncbi_tax_lookup(args.email, [ref])).get("taxid", -1)
+        #    for ref in ((aln_data["ref"],) + (tuple(r for r, _ in aln_data["xa"]) if aln_data["xa"] else tuple()))
+        #)
+        #break
         lineage_data = {
             taxid: {
                 "lineage": lfactory.generate_lineage(taxid),
-                "count": sum(
-                    1 
-                    for ref, _ in aln_data["xa"]
-                    if ncbi_lookup.get(ref, {}).get("taxid", -1) == taxid
-                ),
+                "count": lcount[taxid], 
+                #sum(
+                #    1 
+                #    for ref, _ in aln_data["xa"] + (aln_data["ref"], aln_data["mapq"])
+                #    if ncbi_lookup.get(ref, {}).get("taxid", -1) == taxid
+                #),
             }
             for taxid in aln_data["yp"]
         }
-        lineages = [item["lineage"] for item in lineage_data.values()] 
+        print(lineage_data)
+        lineages = tuple(tuple(v.values()) for v in lineage_data.values())  #  for item in lineage_data.values()] 
+        print(lineages)
+        print(*(f"{l.get_string()}: {c}" for l, c in lineages), sep="\n")
         if len(lineages) == 1:
-            consensus_lineage = lineages[0]
+            consensus_lineage = lineages[0][0]
         else:
-            for level in range(6, -1, -1):
-                c = Counter(
-                    lineage.levels[level]["id"] for lineage in lineages
-                )
+            for level in range(5, -1, -1):
+                c = Counter()
+                for lineage, count in lineages:
+                    c.update((lineage.levels[level]["id"],) * count)
+                print(c)
                 if c:
                     top_taxid, top_count = c.most_common()[0]
                     if top_count / len(c) > 0.75:
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
+                        break
         print(rname, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
 
 
