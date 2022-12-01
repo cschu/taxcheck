@@ -54,7 +54,14 @@ def main():
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--lineage-cutoff", type=float, default=0.75)
     ap.add_argument("--species-cutoff", type=float, default=0.99)
+    ap.add_argument("--ncbi-chunksize", type=int, default=400)
     args = ap.parse_args()
+
+    if args.species_cutoff < args.lineage_cutoff:
+        raise ValueError("Species cutoff ({args.species_cutoff}) needs to be greater than lineage cutoff ({args.lineage_cutoff}).")
+    if args.ncbi_chunksize < 10:
+        raise ValueError("NCBI chunk size needs to be at least 10.")
+
 
     cmd = ("samtools", "view", "-F", "0x4", args.bamfile)
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -81,7 +88,7 @@ def main():
         with open(cached_ncbi) as _in:
             ncbi_lookup = json.load(_in)
     else:
-        ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=400)
+        ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
         with open(cached_ncbi, "wt") as _out:
             json.dump(ncbi_lookup, _out)
 
@@ -127,8 +134,10 @@ def main():
             for level in range(Lineage.TAXLEVELS["species"][0], -1, -1):
                 tax_counter = Counter()
                 # for each level count the taxids (multiplied by number of alignments)
-                for lineage in lineages2.values():
-                    tax_counter.update((lineage["lineage"].levels[level]["id"],) * lineage["count"])
+                for lineage_data in lineages2.values():
+                    lineage, count = lineage_data["lineage"], lineage_data["count"]
+                    level_id = lineage.levels[level]["id"] if lineage.levels[level] is not None else -1
+                    tax_counter.update((level_id,) * count)
                 if args.debug:
                     print("LEVEL", level, tax_counter, file=sys.stderr)
                 # then check if there's a consensus (based on fractional representation by the alignments)
