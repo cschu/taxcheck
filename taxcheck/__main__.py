@@ -55,6 +55,7 @@ def main():
     ap.add_argument("--lineage-cutoff", type=float, default=0.75)
     ap.add_argument("--species-cutoff", type=float, default=0.99)
     ap.add_argument("--ncbi-chunksize", type=int, default=400)
+    ap.add_argument("--ncbi_cache", type=str)
     args = ap.parse_args()
 
     if args.species_cutoff < args.lineage_cutoff:
@@ -83,8 +84,8 @@ def main():
             break
 
     print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr) 
-    cached_ncbi = "ncbi_lut.json"
-    if args.debug and os.path.isfile(cached_ncbi):
+    cached_ncbi = args.ncbi_cache
+    if args.ncbi_cache and os.path.isfile(cached_ncbi):
         with open(cached_ncbi) as _in:
             ncbi_lookup = json.load(_in)
     else:
@@ -148,7 +149,7 @@ def main():
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
                         break    
                     
-        print(rname, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
+        print(rname, len(lineages2), consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
 
 
             
