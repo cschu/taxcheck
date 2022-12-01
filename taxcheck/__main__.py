@@ -130,6 +130,8 @@ def main():
         # determine a consensus line based on fraction of alignments
         if len(lineages2) == 1:
             consensus_lineage = tuple(lineages2.values())[0]["lineage"]
+            consensus_level = "species"
+            
         else:
             # iterate from species -> kingdom
             for level in range(Lineage.TAXLEVELS["species"][0], -1, -1):
@@ -147,9 +149,11 @@ def main():
                     cutoff = args.species_cutoff if level == Lineage.TAXLEVELS["species"][0] else args.lineage_cutoff
                     if top_count / sum(tax_counter.values()) > cutoff:
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
+                        consensus_level = list(Lineage.TAXLEVELS)[level]
                         break    
-                    
-        print(rname, len(lineages2), consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
+        
+        consensus_id, consensus_name = consensus_lineage.levels[-1].values()        
+        print(rname, len(lineages2), len(aln_data["xa_tag"]) + 1, consensus_level, consensus_id, consensus_name, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
 
 
             
