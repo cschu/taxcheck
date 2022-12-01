@@ -127,8 +127,8 @@ def main():
             for level in range(Lineage.TAXLEVELS["species"][0], -1, -1):
                 tax_counter = Counter()
                 # for each level count the taxids (multiplied by number of alignments)
-                for lineage, count in lineages2.values():
-                    tax_counter.update((lineage.levels[level]["id"],) * count)
+                for lineage in lineages2.values():
+                    tax_counter.update((lineage["lineage"].levels[level]["id"],) * lineage["count"])
                 if args.debug:
                     print("LEVEL", level, tax_counter, file=sys.stderr)
                 # then check if there's a consensus (based on fractional representation by the alignments)
