@@ -153,7 +153,7 @@ def main():
                         consensus_id, consensus_name = consensus_lineage.levels[level].values()        
                         break    
         
-            print(rname, len(lineages2), len(aln_data["xa"]) + 1, consensus_level, consensus_id, consensus_name, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
+        print(rname, len(lineages2), len(aln_data["xa"]) + 1, consensus_level, consensus_id, consensus_name, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), sep="\t")
 
 
             
