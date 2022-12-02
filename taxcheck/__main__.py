@@ -90,7 +90,7 @@ def main():
             ncbi_lookup = json.load(_in)
     else:
         ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
-        with open(cached_ncbi, "wt") as _out:
+        with open("f{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
             json.dump(ncbi_lookup, _out)
 
     print("Annotating reads...", file=sys.stderr)
@@ -148,6 +148,7 @@ def main():
                     top_taxid, top_count = tax_counter.most_common()[0]
                     cutoff = args.species_cutoff if level == Lineage.TAXLEVELS["species"][0] else args.lineage_cutoff
                     if top_count / sum(tax_counter.values()) > cutoff:
+                        
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
                         consensus_level = list(Lineage.TAXLEVELS)[level]
                         consensus_id, consensus_name = consensus_lineage.levels[level].values()        
