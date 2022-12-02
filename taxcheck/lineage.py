@@ -55,7 +55,7 @@ class LineageFactory:
 		ranks.setdefault("kingdom", ranks.get("superkingdom", None))
 		names = self.ncbi.get_taxid_translator(lineage)
 		return Lineage(**{
-			f"t_{rank}": { "id": _id, "name": names.get(_id) } 
+			f"t_{rank}": { "id": _id, "name": names.get(_id, "") } 
 			for rank, _id in ranks.items()
 			if Lineage.TAXLEVELS.get(rank)
 		})
