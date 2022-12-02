@@ -150,7 +150,7 @@ def main():
                     cutoff = args.species_cutoff if level == Lineage.TAXLEVELS["species"][0] else args.lineage_cutoff
                     if top_taxid == -1:
                         if not note:
-                            note = f"LEVEL_UNKNOWN={list(Lineage.TAXLEVELS)[level]}"
+                            note = f"FIRST_LEVEL_UNKNOWN={list(Lineage.TAXLEVELS)[level]}"
                     elif top_count / sum(tax_counter.values()) > cutoff:                        
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
                         consensus_level = list(Lineage.TAXLEVELS)[level]
