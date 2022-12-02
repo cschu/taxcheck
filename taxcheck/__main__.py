@@ -90,7 +90,7 @@ def main():
             ncbi_lookup = json.load(_in)
     else:
         ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
-        with open("f{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
+        with open(f"{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
             json.dump(ncbi_lookup, _out)
 
     print("Annotating reads...", file=sys.stderr)
