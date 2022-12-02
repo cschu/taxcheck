@@ -95,7 +95,7 @@ def main():
 
     print("Annotating reads...", file=sys.stderr)
     for rname, aln_data in read2ref.items():
-        note = "."
+        note = ""
 
         rrefs = ((aln_data["ref"],) + (tuple(r for r, _ in aln_data["xa"]) if aln_data["xa"] else tuple()))
         
@@ -147,16 +147,16 @@ def main():
                 # then check if there's a consensus (based on fractional representation by the alignments)
                 if tax_counter:
                     top_taxid, top_count = tax_counter.most_common()[0]
-                    if top_taxid == -1:
-                        top_taxid, top_count = tax_counter.most_common()[1]
-                        note = "TOP_UNKNOWN"
                     cutoff = args.species_cutoff if level == Lineage.TAXLEVELS["species"][0] else args.lineage_cutoff
-                    if top_count / sum(tax_counter.values()) > cutoff:
-                        
+                    if top_taxid == -1:
+                        if not note:
+                            note = f"LEVEL_UNKNOWN={list(Lineage.TAXLEVELS)[level]}"
+                    elif top_count / sum(tax_counter.values()) > cutoff:                        
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
                         consensus_level = list(Lineage.TAXLEVELS)[level]
                         consensus_id, consensus_name = consensus_lineage.levels[level].values()        
-                        break    
+                        break
+                    
         
         print(rname, len(lineages2), len(aln_data["xa"]) + 1, consensus_level, consensus_id, consensus_name, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), note, sep="\t")
 
