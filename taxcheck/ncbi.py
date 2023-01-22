@@ -23,13 +23,20 @@ def ncbi_tax_lookup(email, accessions, chunksize=20):
             idtype="acc", start=start, retmax=chunksize,
             webenv=epost_results["WebEnv"], query_key=epost_results["QueryKey"]
         )
-        data = Entrez.read(efetch_handle)
-        print(f"{len(data)} entries received.", file=sys.stderr)
 
-        for item in data:
-            ncbi_lookup[item["AccessionVersion"]] = {
-                "accession": item["AccessionVersion"],
-                "id": item["Id"],
-                "taxid": int(item["TaxId"]),
-            }
+        try:
+            data = Entrez.read(efetch_handle)
+        except RuntimeError as err:
+            with open("error_dump.txt", "wt") as err_dump:
+                print(efetch_handle, file=err_dump)
+                raise RuntimeError from err
+        else:
+            print(f"{len(data)} entries received.", file=sys.stderr)
+
+            for item in data:
+                ncbi_lookup[item["AccessionVersion"]] = {
+                    "accession": item["AccessionVersion"],
+                    "id": item["Id"],
+                    "taxid": int(item["TaxId"]),
+                }
     return ncbi_lookup
