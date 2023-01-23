@@ -125,8 +125,8 @@ def main():
         }
 
         if args.debug:
-            print(*lineages2, sep="\n", file=sys.stderr)            
-            print(*(f"{l.get_string()}: {c}" for l, c in lineages2.values()), sep="\n", file=sys.stderr)
+            print(*lineages2.values(), sep="\n", file=sys.stderr)            
+            # print(*(f"{l.get_string()}: {c}" for l, c in lineages2.values()), sep="\n", file=sys.stderr)
 
         # determine a consensus line based on fraction of alignments
         if len(lineages2) == 1:

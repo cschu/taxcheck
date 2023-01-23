@@ -49,6 +49,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 			"console_scripts": [
 				"taxcheck=taxcheck.__main__:main",
 				"taxcheck_ncbi=taxcheck.tcheck_with_ncbilookup:main",
+                                "tax_annotate_reference=taxcheck.ncbi_ref_annotate:main",
 			],
 		},
 		package_data={},
