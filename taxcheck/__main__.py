@@ -9,7 +9,7 @@ from collections import Counter
 from functools import lru_cache
 
 from sqlalchemy import create_engine, MetaData, Table, Integer, String, Column
-from sqlalchemy.orm import mapper, sessionmaker, Ba
+from sqlalchemy.orm import mapper, sessionmaker
 
 from taxcheck.lineage import LineageFactory, Lineage
 from taxcheck.ncbi import ncbi_tax_lookup
@@ -82,7 +82,7 @@ def main():
 
     gene_table = Table(
         'NUCACC', metadata, 
-        Column("ACCESSION_VERSION", String),
+        Column("ACCESSION_VERSION", String, primary_key=True),
         Column("TAXID", Integer),
         Column("GBID", Integer),
     )
