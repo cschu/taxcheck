@@ -60,7 +60,7 @@ def get_tax_annotation(db_session, gene_id):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("bamfile", type=str)
-    ap.add_argument("email", type=str)
+    # ap.add_argument("email", type=str)
     ap.add_argument("taxdb", type=str)
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--lineage-cutoff", type=float, default=0.75)
