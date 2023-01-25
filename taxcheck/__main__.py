@@ -53,9 +53,9 @@ def extract_refs_from_xa_tag(xa_tag):
 
 @lru_cache(maxsize=10000)
 def get_tax_annotation(db_session, gene_id):
-    print(f"Querying {gene_id} (type: {type(gene_id)}")
+    print(f"Querying {gene_id} (type: {type(gene_id)}", file=sys.stderr)
     gene = db_session.query(Gene).filter(Gene.ACCESSION_VERSION == gene_id).one_or_none()
-    return gene.TAXID if gene is not None else None
+    return gene.TAXID if gene is not None else -1
 
 
 
@@ -99,58 +99,69 @@ def main():
 
     lfactory = LineageFactory()
     read2ref = {}
-    refs = set()
-
-    print("Reading bam file...", file=sys.stderr)
-    for rname, ref, mapq, yp_tag, xa_tag in extract_yp_reads_from_sam(sam_proc.stdout):
-        read2ref[rname] = {
-            "ref": ref,
-            "mapq": mapq,
-            "yp": yp_tag,
-            "xa": xa_tag,
-        }
-        refs.update((ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple()))
-        if args.debug and len(read2ref) > 10:
-            break
-
-    print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr)
-    # cached_ncbi = args.ncbi_cache
-    # if args.ncbi_cache and os.path.isfile(cached_ncbi):
-    #     with open(cached_ncbi) as _in:
-    #         ncbi_lookup = json.load(_in)
-    # else:
-    #     ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
-    #     with open(f"{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
-    #         json.dump(ncbi_lookup, _out)
+    # refs = set()
     ncbi_lookup = {}
-    for ref in refs:
-        acc = [x for x in ref.split("|") if x and x != "ref"]
-        taxid = get_tax_annotation(session, acc[0])
-        ncbi_lookup.setdefault(ref, {})["taxid"] = taxid
-        with open(f"{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
-            json.dump(ncbi_lookup, _out)
 
-    print("Annotating reads...", file=sys.stderr)
-    for rname, aln_data in read2ref.items():
-        note = ""
+    print("Parsing bam file...", file=sys.stderr)
+    for rname, ref, mapq, yp_tag, xa_tag in extract_yp_reads_from_sam(sam_proc.stdout):
+        # read2ref[rname] = {
+        #     "ref": ref,
+        #     "mapq": mapq,
+        #     "yp": yp_tag,
+        #     "xa": xa_tag,
+        # }
 
-        rrefs = ((aln_data["ref"],) + (tuple(r for r, _ in aln_data["xa"]) if aln_data["xa"] else tuple()))
-
-        if args.debug:
-            print(rname, aln_data, file=sys.stderr)
-            print("RREFS", rrefs, file=sys.stderr)
-            print("CHECK", aln_data["ref"] in ncbi_lookup, file=sys.stderr)
-
-        # count how often a read aligns against a refseq from a specific taxonomy
         lcount = Counter()
-        for ref in rrefs:
-            if args.debug:
-                print(ref, ncbi_lookup.get(ref), file=sys.stderr)
-            lcount[ncbi_lookup.get(ref, {}).get("taxid", -1)] += 1
+        refs = (ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple())
+        for gene_id in refs:
+            acc =[x for x in gene_id.split("|") if x and x != "ref"]
+            lcount[ncbi_lookup.setdefault(gene_id, {"taxid": get_tax_annotation(session, acc[0])})[gene_id]] += 1
 
-        if args.debug:
-            print("LCOUNT", lcount, file=sys.stderr)
-            print("LCOUNT HAS -1", -1 in lcount, file=sys.stderr)
+        # lcount[ncbi_lookup.get(ref, {}).get("taxid", -1)] += 1
+        # for gene_id in (ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple()):
+
+        # refs.update((ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple()))
+        # if args.debug and len(read2ref) > 10:
+        #     break
+
+        # # print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr)
+        # # cached_ncbi = args.ncbi_cache
+        # # if args.ncbi_cache and os.path.isfile(cached_ncbi):
+        # #     with open(cached_ncbi) as _in:
+        # #         ncbi_lookup = json.load(_in)
+        # # else:
+        # #     ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
+        # #     with open(f"{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
+        # #         json.dump(ncbi_lookup, _out)
+        
+        # # for ref in refs:
+        # #     acc = [x for x in ref.split("|") if x and x != "ref"]
+        # #     taxid = get_tax_annotation(session, acc[0])
+        # #     ncbi_lookup.setdefault(ref, {})["taxid"] = taxid
+        # #     with open(f"{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
+        # #         json.dump(ncbi_lookup, _out)
+
+        # print("Annotating reads...", file=sys.stderr)
+        # for rname, aln_data in read2ref.items():
+        #     note = ""
+
+        #     rrefs = ((aln_data["ref"],) + (tuple(r for r, _ in aln_data["xa"]) if aln_data["xa"] else tuple()))
+
+        #     if args.debug:
+        #         print(rname, aln_data, file=sys.stderr)
+        #         print("RREFS", rrefs, file=sys.stderr)
+        #         print("CHECK", aln_data["ref"] in ncbi_lookup, file=sys.stderr)
+
+        #     # count how often a read aligns against a refseq from a specific taxonomy
+        #     lcount = Counter()
+        #     for ref in rrefs:
+        #         if args.debug:
+        #             print(ref, ncbi_lookup.get(ref), file=sys.stderr)
+        #         lcount[ncbi_lookup.get(ref, {}).get("taxid", -1)] += 1
+
+        #     if args.debug:
+        #         print("LCOUNT", lcount, file=sys.stderr)
+        #         print("LCOUNT HAS -1", -1 in lcount, file=sys.stderr)
 
         # generate lineages from each reference and store the alignment counts along with it
         lineages2 = {
@@ -158,7 +169,7 @@ def main():
                 "lineage": lfactory.generate_lineage(taxid),
                 "count": lcount[taxid],
             }
-            for taxid in aln_data["yp"]
+            for taxid in yp_tag  # aln_data["yp"]
         }
 
         if args.debug:
@@ -197,7 +208,8 @@ def main():
         print(
             rname,
             len(lineages2),
-            len(aln_data["xa"]) + 1,
+            # len(aln_data["xa"]) + 1,
+            len(xa_tag) + 1,
             consensus_level,
             consensus_id,
             consensus_name,
