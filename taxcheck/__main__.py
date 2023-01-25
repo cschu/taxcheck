@@ -56,7 +56,7 @@ def extract_refs_from_xa_tag(xa_tag):
 
 @lru_cache(maxsize=10000)
 def get_tax_annotation(db_session, gene_id):
-    print(f"Querying {gene_id} (type: {type(gene_id)}", file=sys.stderr)
+    # print(f"Querying {gene_id} (type: {type(gene_id)}", file=sys.stderr)
     gene = db_session.query(Gene).filter(Gene.ACCESSION_VERSION == gene_id).one_or_none()
     return gene.TAXID if gene is not None else -1
 
@@ -113,7 +113,9 @@ def main():
     ncbi_lookup = {}
 
     print("Parsing bam file...", file=sys.stderr)
-    for rname, ref, mapq, yp_tag, xa_tag in extract_yp_reads_from_sam(sam_proc.stdout):
+    for nreads, (rname, ref, mapq, yp_tag, xa_tag) in enumerate(extract_yp_reads_from_sam(sam_proc.stdout), start=1):
+        if nreads % 1000000 == 0:
+            print(f"Processed {nreads} reads.", file=sys.stderr)
         # read2ref[rname] = {
         #     "ref": ref,
         #     "mapq": mapq,
