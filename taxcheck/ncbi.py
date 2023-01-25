@@ -1,5 +1,7 @@
 import sys
 
+from http.client import IncompleteRead
+
 from Bio import Entrez
 
 
@@ -46,6 +48,24 @@ def lookup_accessions(email, accessions, chunksize=20, db="nucleotide", trials=2
                 lookup = lookup_accessions(email, accessions, chunksize=chunksize, db=db, trials=trials - 1)
                 if lookup is not None:
                     ncbi_lookup.update(lookup)
+        except IncompleteRead as err:
+ 
+            if trials == 0:
+                print(f"Caught runtime error when reading efetch:\n{err}\Lost accessions:", file=sys.stderr)
+                print(",".join(accessions), file=sys.stderr)
+                                                                                                             
+                ncbi_lookup.update({
+                    acc: {"accession": acc, "id": None, "taxid": None}
+                    for acc in accessions
+                })
+                                                                                                             
+            else:
+                lookup = lookup_accessions(email, accessions, chunksize=chunksize, db=db, trials=trials - 1)
+                if lookup is not None:
+                    ncbi_lookup.update(lookup)
+
+
+            
             
         else:
             print(f"Received {len(data)} entries.", file=sys.stderr)
