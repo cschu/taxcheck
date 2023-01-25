@@ -115,7 +115,7 @@ def main():
         refs = (ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple())
         for gene_id in refs:
             acc =[x for x in gene_id.split("|") if x and x != "ref"]
-            lcount[ncbi_lookup.setdefault(gene_id, {"taxid": get_tax_annotation(session, acc[0])})[gene_id]] += 1
+            lcount[ncbi_lookup.setdefault(gene_id, get_tax_annotation(session, acc[0]))] += 1
 
         # lcount[ncbi_lookup.get(ref, {}).get("taxid", -1)] += 1
         # for gene_id in (ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple()):
