@@ -5,7 +5,6 @@ from http.client import IncompleteRead
 from Bio import Entrez
 
 
-
 def lookup_accessions(email, accessions, chunksize=20, db="nucleotide", trials=2):
     ncbi_lookup = {}
 
@@ -25,7 +24,7 @@ def lookup_accessions(email, accessions, chunksize=20, db="nucleotide", trials=2
         if block2:
             lookup2 = lookup_accessions(email, block2, chunksize=chunksize, db=db)
             if lookup2 is not None:
-                ncbi_lookup.update(lookup2)           
+                ncbi_lookup.update(lookup2)
     else:
         efetch_handle = Entrez.efetch(
             db=db, rettype="docsum", retmode="xml", idtype="acc", retmax=chunksize,
@@ -34,9 +33,9 @@ def lookup_accessions(email, accessions, chunksize=20, db="nucleotide", trials=2
         try:
             data = Entrez.read(efetch_handle)
         except RuntimeError as err:
-            
+
             if trials == 0:
-                print(f"Caught runtime error when reading efetch:\n{err}\Lost accessions:", file=sys.stderr)
+                print(f"Caught runtime error when reading efetch:\n{err}\nLost accessions:", file=sys.stderr)
                 print(",".join(accessions), file=sys.stderr)
 
                 ncbi_lookup.update({
@@ -49,24 +48,21 @@ def lookup_accessions(email, accessions, chunksize=20, db="nucleotide", trials=2
                 if lookup is not None:
                     ncbi_lookup.update(lookup)
         except IncompleteRead as err:
- 
+
             if trials == 0:
-                print(f"Caught runtime error when reading efetch:\n{err}\Lost accessions:", file=sys.stderr)
+                print(f"Caught runtime error when reading efetch:\n{err}\nLost accessions:", file=sys.stderr)
                 print(",".join(accessions), file=sys.stderr)
-                                                                                                             
+
                 ncbi_lookup.update({
                     acc: {"accession": acc, "id": None, "taxid": None}
                     for acc in accessions
                 })
-                                                                                                             
+
             else:
                 lookup = lookup_accessions(email, accessions, chunksize=chunksize, db=db, trials=trials - 1)
                 if lookup is not None:
                     ncbi_lookup.update(lookup)
 
-
-            
-            
         else:
             print(f"Received {len(data)} entries.", file=sys.stderr)
 
@@ -80,9 +76,6 @@ def lookup_accessions(email, accessions, chunksize=20, db="nucleotide", trials=2
             })
 
     return ncbi_lookup
-        
-             
-
 
 
 def ncbi_tax_lookup(email, accessions, chunksize=20, db="nucleotide"):

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import gzip
 import re
 import subprocess
 import sys
@@ -8,7 +7,6 @@ import sys
 from Bio import Entrez
 
 from lineage import LineageLookup
-
 
 
 def get_lines_from_chunks(_in, bufsize=400000000):
@@ -38,10 +36,6 @@ def extract_read_ref_from_sam(stream):
     return read2ref
 
 
-
-
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("bamfile", type=str)
@@ -54,7 +48,6 @@ def main():
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
     read2ref = extract_read_ref_from_sam(sam_proc.stdout)
-
 
     ncbi_lookup = {}
     lineage_lookup = LineageLookup()
@@ -84,13 +77,12 @@ def main():
             mod_acc = re.sub(r"^ref\|", "", acc).strip("|")
             acc_data = ncbi_lookup.get(mod_acc)
             taxname, name_lineage, taxid_lineage = lineage_lookup.get_lineage(acc_data["taxid"])
-            # print(acc, mod_acc, acc_data, name_lineage, taxid_lineage)
-            
+            # print(acc, mod_acc, acc_data, name_lineage, taxid_lineage)
+
             for read in read2ref[acc]:
                 print(read, acc, mod_acc, acc_data["taxid"], taxname, name_lineage, taxid_lineage, sep="\t")
-            
 
-#[
+# [
 #    {
 #        'Item': [], 'Id': '1160384904', 'Caption': 'NZ_MZGV01000142',
 #        'Title': 'Clostridium oryzae strain DSM 28571 CLORY_contig000142, whole genome shotgun sequence',
@@ -106,7 +98,7 @@ def main():
 #        'Flags': IntegerElement(544, attributes={}), 'TaxId': IntegerElement(1122930, attributes={}),
 #        'Length': IntegerElement(423394, attributes={}), 'Status': 'live', 'ReplacedBy': '', 'Comment': '  ', 'AccessionVersion': 'NZ_FWXW01000002.1'
 #    }
-#]
+# ]
 
 
 if __name__ == "__main__":

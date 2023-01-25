@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 import argparse
-import gzip
 import json
 import os
-import re
 import subprocess
 import sys
 
 from collections import Counter
 
-from Bio import Entrez
-
-from taxcheck.lineage import LineageLookup, LineageFactory, Lineage
+from taxcheck.lineage import LineageFactory, Lineage
 from taxcheck.ncbi import ncbi_tax_lookup
 
 
@@ -29,7 +25,7 @@ def get_lines_from_chunks(_in, bufsize=400000000):
         yield tail
 
 
-def extract_yp_reads_from_sam(stream):    
+def extract_yp_reads_from_sam(stream):
     for aln in get_lines_from_chunks(stream):
         aln = aln.strip().split("\t")
         tags = dict(item.split(":")[0::2] for item in aln[11:])
@@ -44,7 +40,7 @@ def extract_yp_reads_from_sam(stream):
 
 def extract_refs_from_xa_tag(xa_tag):
     # XA:Z:NZ_BAHC01000194.1,-269,60S30M,0;NZ_BAFX01000157.1,-297,60S29M1S,0;NZ_MOSG01000117.1,-656,59S25M6S,0;NZ_AOON01000169.1,+2,25M65S,0;
-    return (item.split(",")[0::3] for item in xa_tag[5:].split(";"))    
+    return (item.split(",")[0::3] for item in xa_tag[5:].split(";"))
 
 
 def main():
@@ -63,14 +59,13 @@ def main():
     if args.ncbi_chunksize < 10:
         raise ValueError("NCBI chunk size needs to be at least 10.")
 
-
     cmd = ("samtools", "view", "-F", "0x4", args.bamfile)
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
     lfactory = LineageFactory()
     read2ref = {}
     refs = set()
-    
+
     print("Reading bam file...", file=sys.stderr)
     for rname, ref, mapq, yp_tag, xa_tag in extract_yp_reads_from_sam(sam_proc.stdout):
         read2ref[rname] = {
@@ -83,7 +78,7 @@ def main():
         if args.debug and len(read2ref) > 10:
             break
 
-    print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr) 
+    print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr)
     cached_ncbi = args.ncbi_cache
     if args.ncbi_cache and os.path.isfile(cached_ncbi):
         with open(cached_ncbi) as _in:
@@ -98,7 +93,7 @@ def main():
         note = ""
 
         rrefs = ((aln_data["ref"],) + (tuple(r for r, _ in aln_data["xa"]) if aln_data["xa"] else tuple()))
-        
+
         if args.debug:
             print(rname, aln_data, file=sys.stderr)
             print("RREFS", rrefs, file=sys.stderr)
@@ -110,29 +105,29 @@ def main():
             if args.debug:
                 print(ref, ncbi_lookup.get(ref), file=sys.stderr)
             lcount[ncbi_lookup.get(ref, {}).get("taxid", -1)] += 1
-        
+
         if args.debug:
             print("LCOUNT", lcount, file=sys.stderr)
             print("LCOUNT HAS -1", -1 in lcount, file=sys.stderr)
 
-        # generate lineages from each reference and store the alignment counts along with it  
+        # generate lineages from each reference and store the alignment counts along with it
         lineages2 = {
             taxid: {
                 "lineage": lfactory.generate_lineage(taxid),
-                "count": lcount[taxid], 
+                "count": lcount[taxid],
             }
             for taxid in aln_data["yp"]
         }
 
         if args.debug:
-            print(*lineages2.values(), sep="\n", file=sys.stderr)            
+            print(*lineages2.values(), sep="\n", file=sys.stderr)
             # print(*(f"{l.get_string()}: {c}" for l, c in lineages2.values()), sep="\n", file=sys.stderr)
 
         # determine a consensus line based on fraction of alignments
         if len(lineages2) == 1:
             consensus_lineage = tuple(lineages2.values())[0]["lineage"]
             consensus_level = "species"
-            consensus_id, consensus_name = consensus_lineage.levels[-1].values()        
+            consensus_id, consensus_name = consensus_lineage.levels[-1].values()
         else:
             # iterate from species -> kingdom
             for level in range(Lineage.TAXLEVELS["species"][0], -1, -1):
@@ -151,17 +146,24 @@ def main():
                     if top_taxid == -1:
                         if not note:
                             note = f"FIRST_LEVEL_UNKNOWN={list(Lineage.TAXLEVELS)[level]}"
-                    elif top_count / sum(tax_counter.values()) > cutoff:                        
+                    elif top_count / sum(tax_counter.values()) > cutoff:
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
                         consensus_level = list(Lineage.TAXLEVELS)[level]
-                        consensus_id, consensus_name = consensus_lineage.levels[level].values()        
+                        consensus_id, consensus_name = consensus_lineage.levels[level].values()
                         break
-                    
-        
-        print(rname, len(lineages2), len(aln_data["xa"]) + 1, consensus_level, consensus_id, consensus_name, consensus_lineage.get_string(), consensus_lineage.get_string(show_names=False), note, sep="\t")
 
-
-            
+        print(
+            rname,
+            len(lineages2),
+            len(aln_data["xa"]) + 1,
+            consensus_level,
+            consensus_id,
+            consensus_name,
+            consensus_lineage.get_string(),
+            consensus_lineage.get_string(show_names=False),
+            note,
+            sep="\t",
+        )
 
 
 if __name__ == "__main__":

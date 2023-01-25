@@ -1,17 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-import gzip
-import json
-import os
-import re
-import subprocess
 import sys
 
-from collections import Counter
-
-from Bio import Entrez
-
-from taxcheck.lineage import LineageLookup, LineageFactory, Lineage
 from taxcheck.ncbi import ncbi_tax_lookup
 
 
@@ -48,12 +38,9 @@ def main():
             for line in get_lines_from_chunks(_in)
             if line[0] == ">"
         }
-    
-        print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr) 
-        ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
 
-        # for v in ncbi_lookup.values():
-        #    print(v["accession"], v["id"], v["taxid"], sep="\t")
+        print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr)
+        _ = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
 
 
 if __name__ == "__main__":
