@@ -52,7 +52,7 @@ def extract_refs_from_xa_tag(xa_tag):
 
 @lru_cache(maxsize=10000)
 def get_tax_annotation(db_session, gene_id):
-    print(f"Querying {gene_id} (type: {type(gene_id}")
+    print(f"Querying {gene_id} (type: {type(gene_id)}")
     gene = db_session.query(Gene).filter(Gene.ACCESSION_VERSION == gene_id).one_or_none()
     return gene.TAXID if gene is not None else None
 
