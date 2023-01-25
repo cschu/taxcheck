@@ -71,8 +71,8 @@ def main():
 
     if args.species_cutoff < args.lineage_cutoff:
         raise ValueError("Species cutoff ({args.species_cutoff}) needs to be greater than lineage cutoff ({args.lineage_cutoff}).")
-    if args.ncbi_chunksize < 10:
-        raise ValueError("NCBI chunk size needs to be at least 10.")
+    # if args.ncbi_chunksize < 10:
+    #    raise ValueError("NCBI chunk size needs to be at least 10.")
 
 
     engine = create_engine(f"sqlite:///{args.taxdb}")
