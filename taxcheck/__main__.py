@@ -110,7 +110,7 @@ def main():
         #     "yp": yp_tag,
         #     "xa": xa_tag,
         # }
-
+        note = ""
         lcount = Counter()
         refs = (ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple())
         for gene_id in refs:
