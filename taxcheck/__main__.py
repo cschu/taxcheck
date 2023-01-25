@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 
@@ -10,6 +11,8 @@ from functools import lru_cache
 
 from sqlalchemy import create_engine, MetaData, Table, Integer, String, Column
 from sqlalchemy.orm import mapper, sessionmaker
+from sqlalchemy.pool import StaticPool
+
 
 from taxcheck.lineage import LineageFactory, Lineage
 from taxcheck.ncbi import ncbi_tax_lookup
@@ -76,8 +79,15 @@ def main():
     # if args.ncbi_chunksize < 10:
     #    raise ValueError("NCBI chunk size needs to be at least 10.")
 
+    source = sqlite3.connect(f"file:{args.taxdb}?mode=ro", uri=True)
 
-    engine = create_engine(f"sqlite:///{args.taxdb}")
+    # https://stackoverflow.com/questions/68286690/copy-an-sqlite-database-into-memory-using-sqlalchemy-for-testing-flask-app !!!
+    engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={'check_same_thread': False},)
+    conn = engine.raw_connection().connection
+        
+    source.backup(conn)
+    
+    # engine = create_engine(f"sqlite:///{args.taxdb}")
     metadata = MetaData(engine)
 
     gene_table = Table(
