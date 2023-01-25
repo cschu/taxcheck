@@ -116,7 +116,7 @@ def main():
     ncbi_lookup = {}
     for ref in refs:
         acc = [x for x in ref.split("|") if x and x != "ref"]
-        taxid = get_tax_annotation(acc[0], session)
+        taxid = get_tax_annotation(session, acc[0])
         ncbi_lookup.setdefault(ref, {})["taxid"] = taxid
         with open(f"{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
             json.dump(ncbi_lookup, _out)
