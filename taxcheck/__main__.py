@@ -8,8 +8,8 @@ import sys
 from collections import Counter
 from functools import lru_cache
 
-from sqlalchemy import create_engine, MetaData, Table
-from sqlalchemy.orm import mapper, sessionmaker
+from sqlalchemy import create_engine, MetaData, Table, Integer, String, Column
+from sqlalchemy.orm import mapper, sessionmaker, Ba
 
 from taxcheck.lineage import LineageFactory, Lineage
 from taxcheck.ncbi import ncbi_tax_lookup
@@ -17,6 +17,7 @@ from taxcheck.ncbi import ncbi_tax_lookup
 
 class Gene:
     ...
+
 
 
 def get_lines_from_chunks(_in, bufsize=400000000):
@@ -79,7 +80,12 @@ def main():
     engine = create_engine(f"sqlite:///{args.taxdb}")
     metadata = MetaData(engine)
 
-    gene_table = Table('NUCACC', metadata, autoload=True)
+    gene_table = Table(
+        'NUCACC', metadata, 
+        Column("ACCESSION_VERSION", String),
+        Column("TAXID", Integer),
+        Column("GBID", Integer),
+    )
     _ = mapper(Gene, gene_table)
 
     Session = sessionmaker(bind=engine)
