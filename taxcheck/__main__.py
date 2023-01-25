@@ -101,9 +101,6 @@ def main():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    print(dir(Gene))
-
-
     cmd = ("samtools", "view", "-F", "0x4", args.bamfile)
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
