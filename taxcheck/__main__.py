@@ -6,9 +6,17 @@ import subprocess
 import sys
 
 from collections import Counter
+from functools import lru_cache
+
+from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy.orm import mapper, sessionmaker
 
 from taxcheck.lineage import LineageFactory, Lineage
 from taxcheck.ncbi import ncbi_tax_lookup
+
+
+class Gene:
+    ...
 
 
 def get_lines_from_chunks(_in, bufsize=400000000):
@@ -42,22 +50,40 @@ def extract_refs_from_xa_tag(xa_tag):
     # XA:Z:NZ_BAHC01000194.1,-269,60S30M,0;NZ_BAFX01000157.1,-297,60S29M1S,0;NZ_MOSG01000117.1,-656,59S25M6S,0;NZ_AOON01000169.1,+2,25M65S,0;
     return (item.split(",")[0::3] for item in xa_tag[5:].split(";"))
 
+@lru_cache(maxsize=10000)
+def get_tax_annotation(db_session, gene_id):
+    gene = db_session.query(Gene).filter(Gene.ACCESSION_VERSION == gene_id).one_or_none()
+    return gene.TAXID if gene is not None else None
+
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("bamfile", type=str)
     ap.add_argument("email", type=str)
+    ap.add_argument("taxdb", type=str)
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--lineage-cutoff", type=float, default=0.75)
     ap.add_argument("--species-cutoff", type=float, default=0.99)
-    ap.add_argument("--ncbi-chunksize", type=int, default=400)
-    ap.add_argument("--ncbi_cache", type=str)
+    # ap.add_argument("--ncbi-chunksize", type=int, default=400)
+    # ap.add_argument("--ncbi_cache", type=str)
     args = ap.parse_args()
 
     if args.species_cutoff < args.lineage_cutoff:
         raise ValueError("Species cutoff ({args.species_cutoff}) needs to be greater than lineage cutoff ({args.lineage_cutoff}).")
     if args.ncbi_chunksize < 10:
         raise ValueError("NCBI chunk size needs to be at least 10.")
+
+
+    engine = create_engine(f"sqlite:///{args.taxdb}")
+    metadata = MetaData(engine)
+
+    gene_table = Table('NUCACC', metadata, autoload=True)
+    _ = mapper(Gene, gene_table)
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
 
     cmd = ("samtools", "view", "-F", "0x4", args.bamfile)
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -79,12 +105,19 @@ def main():
             break
 
     print(f"Looking up {len(refs)} taxonomy ids...", file=sys.stderr)
-    cached_ncbi = args.ncbi_cache
-    if args.ncbi_cache and os.path.isfile(cached_ncbi):
-        with open(cached_ncbi) as _in:
-            ncbi_lookup = json.load(_in)
-    else:
-        ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
+    # cached_ncbi = args.ncbi_cache
+    # if args.ncbi_cache and os.path.isfile(cached_ncbi):
+    #     with open(cached_ncbi) as _in:
+    #         ncbi_lookup = json.load(_in)
+    # else:
+    #     ncbi_lookup = ncbi_tax_lookup(args.email, list(refs), chunksize=args.ncbi_chunksize)
+    #     with open(f"{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
+    #         json.dump(ncbi_lookup, _out)
+    ncbi_lookup = {}
+    for ref in refs:
+        acc = [x for x in ref.split("|") if x and x != "ref"]
+        taxid = get_tax_annotation(acc[0], session)
+        ncbi_lookup.setdefault(ref, {})["taxid"] = taxid
         with open(f"{os.path.basename(args.bamfile)}.ncbi_cache.json", "wt") as _out:
             json.dump(ncbi_lookup, _out)
 
