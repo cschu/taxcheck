@@ -44,6 +44,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 			"six",
 			"numpy",
 			"biopython",
+                        "sqlalchemy",
 		],
 		entry_points={
 			"console_scripts": [
