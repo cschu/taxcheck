@@ -79,27 +79,29 @@ def main():
     # if args.ncbi_chunksize < 10:
     #    raise ValueError("NCBI chunk size needs to be at least 10.")
 
-    source = sqlite3.connect(f"file:{args.taxdb}?mode=ro", uri=True)
+    with open(args.taxdb, "rt") as db_in:
+        db = {line.strip().split()[0]: tuple(line.strip().split()[1:]) for line in db_in}
+    # source = sqlite3.connect(f"file:{args.taxdb}?mode=ro", uri=True)
 
-    # https://stackoverflow.com/questions/68286690/copy-an-sqlite-database-into-memory-using-sqlalchemy-for-testing-flask-app !!!
-    engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={'check_same_thread': False},)
-    conn = engine.raw_connection().connection
+    # # https://stackoverflow.com/questions/68286690/copy-an-sqlite-database-into-memory-using-sqlalchemy-for-testing-flask-app !!!
+    # engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={'check_same_thread': False},)
+    # conn = engine.raw_connection().connection
         
-    source.backup(conn)
+    # source.backup(conn)
     
-    # engine = create_engine(f"sqlite:///{args.taxdb}")
-    metadata = MetaData(engine)
+    # # engine = create_engine(f"sqlite:///{args.taxdb}")
+    # metadata = MetaData(engine)
 
-    gene_table = Table(
-        'NUCACC', metadata, 
-        Column("ACCESSION_VERSION", String, primary_key=True),
-        Column("TAXID", Integer),
-        Column("GBID", Integer),
-    )
-    _ = mapper(Gene, gene_table)
+    # gene_table = Table(
+    #     'NUCACC', metadata, 
+    #     Column("ACCESSION_VERSION", String, primary_key=True),
+    #     Column("TAXID", Integer),
+    #     Column("GBID", Integer),
+    # )
+    # _ = mapper(Gene, gene_table)
 
-    Session = sessionmaker(bind=engine)
-    session = Session()
+    # Session = sessionmaker(bind=engine)
+    # session = Session()
 
     cmd = ("samtools", "view", "-F", "0x4", args.bamfile)
     sam_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -119,7 +121,9 @@ def main():
         refs = (ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple())
         for gene_id in refs:
             acc =[x for x in gene_id.split("|") if x and x != "ref"]
-            lcount[ncbi_lookup.setdefault(gene_id, get_tax_annotation(session, acc[0]))] += 1
+            
+            # lcount[ncbi_lookup.setdefault(gene_id, get_tax_annotation(session, acc[0]))] += 1
+            lcount[ncbi_lookup.setdefault(gene_id, db.get(acc[0]))] += 1
 
         lineages = {
             taxid: {
