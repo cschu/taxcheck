@@ -80,7 +80,7 @@ def main():
     #    raise ValueError("NCBI chunk size needs to be at least 10.")
 
     with open(args.taxdb, "rt") as db_in:
-        db = {line.strip().split()[0]: tuple(line.strip().split()[1:]) for line in db_in}
+        db = {line.strip().split()[0]: tuple(int(x) for x in line.strip().split()[1:]) for line in db_in}
     # source = sqlite3.connect(f"file:{args.taxdb}?mode=ro", uri=True)
 
     # # https://stackoverflow.com/questions/68286690/copy-an-sqlite-database-into-memory-using-sqlalchemy-for-testing-flask-app !!!
@@ -123,7 +123,7 @@ def main():
             acc =[x for x in gene_id.split("|") if x and x != "ref"]
             
             # lcount[ncbi_lookup.setdefault(gene_id, get_tax_annotation(session, acc[0]))] += 1
-            lcount[ncbi_lookup.setdefault(gene_id, db.get(acc[0]))] += 1
+            lcount[ncbi_lookup.setdefault(gene_id, db.get(acc[0], [None, None])[1])] += 1
 
         lineages = {
             taxid: {
