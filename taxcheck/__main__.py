@@ -113,7 +113,7 @@ def main():
 
     print("Parsing bam file...", file=sys.stderr)
     for nreads, (rname, ref, mapq, yp_tag, xa_tag) in enumerate(extract_yp_reads_from_sam(sam_proc.stdout), start=1):
-        if nreads % 1000000 == 0:
+        if nreads % 1000 == 0:
             print(f"Processed {nreads} reads.", file=sys.stderr)
         
         note = ""
