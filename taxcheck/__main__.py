@@ -123,7 +123,7 @@ def main():
             acc =[x for x in gene_id.split("|") if x and x != "ref"]
             
             # lcount[ncbi_lookup.setdefault(gene_id, get_tax_annotation(session, acc[0]))] += 1
-            lcount[ncbi_lookup.setdefault(gene_id, db.get(acc[0], [None, None])[1])] += 1
+            lcount[ncbi_lookup.setdefault(gene_id, db.get(acc[0], [None, -1])[1])] += 1
 
         lineages = {
             taxid: {
