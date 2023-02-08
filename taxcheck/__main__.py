@@ -116,14 +116,17 @@ def main():
         if nreads % 1000 == 0:
             print(f"Processed {nreads} reads.", file=sys.stderr)
         
-        note = ""
+        levels_with_unknown = []
         lcount = Counter()
         refs = (ref, ) + (tuple(item[0] for item in xa_tag) if xa_tag else tuple())
         for gene_id in refs:
             acc =[x for x in gene_id.split("|") if x and x != "ref"]
             
             # lcount[ncbi_lookup.setdefault(gene_id, get_tax_annotation(session, acc[0]))] += 1
-            lcount[ncbi_lookup.setdefault(gene_id, db.get(acc[0], [None, -1])[1])] += 1
+            _, accession_taxid_lookup = db.get(acc[0], [None, -1])
+            lcount[ncbi_lookup.setdefault(gene_id, accession_taxid_lookup)] += 1
+            if args.debug and accession_taxid_lookup == -1:
+                print("TAXLOOKUP", rname, acc, file=sys.stderr, flush=True)
 
         lineages = {
             taxid: {
@@ -132,6 +135,13 @@ def main():
             }
             for taxid, count in lcount.items()
         }
+        if args.debug:
+            print("LINEAGES", rname, file=sys.stderr, flush=True)
+            for item in lineages.items():
+                print(item[0], *enumerate(item[1]["lineage"].levels), item[1]["count"], file=sys.stderr, flush=True)                
+
+
+        consensus_lineage, consensus_level, consensus_id, consensus_name = None, None, None, None
 
         if len(lineages) == 1:
             consensus_lineage = tuple(lineages.values())[0]["lineage"]
@@ -148,15 +158,14 @@ def main():
                     level_id = lineage.levels[level]["id"] if lineage.levels[level] is not None else -1
                     tax_counter.update((level_id,) * count)
                 if args.debug:
-                    print("LEVEL", level, tax_counter, file=sys.stderr)
+                    print("LEVEL", rname, level, tax_counter, file=sys.stderr, flush=True)
                 # then check if there's a consensus (based on fractional representation by the alignments)
                 if tax_counter:
                     top_taxid, top_count = tax_counter.most_common()[0]
                     cutoff = args.species_cutoff if level == Lineage.TAXLEVELS["species"][0] else args.lineage_cutoff
                     if top_taxid == -1:
-                        if not note:
-                            note = f"FIRST_LEVEL_UNKNOWN={list(Lineage.TAXLEVELS)[level]}"
-                    elif top_count / sum(tax_counter.values()) > cutoff:
+                        levels_with_unknown.append(list(Lineage.TAXLEVELS)[level])
+                    elif top_count / sum(tax_counter.values()) >= cutoff:
                         consensus_lineage = lfactory.generate_lineage(top_taxid)
                         consensus_level = list(Lineage.TAXLEVELS)[level]
                         consensus_id, consensus_name = consensus_lineage.levels[level].values()
@@ -226,10 +235,11 @@ def main():
             consensus_level,
             consensus_id,
             consensus_name,
-            consensus_lineage.get_string(),
-            consensus_lineage.get_string(show_names=False),
-            note,
+            consensus_lineage.get_string() if consensus_lineage is not None else None,
+            consensus_lineage.get_string(show_names=False) if consensus_lineage is not None else None,
+            f"LEVELS_WITH_UNKNOWNS={','.join(levels_with_unknown)}" if levels_with_unknown else "",
             sep="\t",
+            flush=args.debug,
         )
 
 
